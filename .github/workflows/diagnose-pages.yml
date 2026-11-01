@@ -1,0 +1,38 @@
+name: Diagnose GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnose-pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pages configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "== Pages config =="; gh api "repos/${{ github.repository }}/pages" || true
+          echo; echo "== Latest build =="; gh api "repos/${{ github.repository }}/pages/builds/latest" || true
+
+      - name: Fetch the live site
+        run: |
+          sleep 20
+          for u in \
+            "https://ianes1978.github.io/SmartClips/" \
+            "https://ianes1978.github.io/SmartClips/index.html" \
+            "https://ianes1978.github.io/smartclips/" \
+            "https://ianes1978.github.io/SmartClips/manifest.webmanifest" \
+            "https://ianes1978.github.io/SmartClips/sw.js"; do
+            echo "== $u =="
+            curl -s -o /tmp/body -D - "$u" | grep -iE '^(HTTP|location|content-type|last-modified|age|x-cache|cache-control)' || true
+            echo "-- first bytes: $(head -c 200 /tmp/body | tr '\n' ' ')"
+            grep -o 'Apri in Gemini' /tmp/body | head -1 || true
+            echo
+          done
