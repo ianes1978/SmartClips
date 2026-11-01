@@ -1,0 +1,4 @@
+desktop: https://ianes1978.github.io/SmartClips/ -> HTTP 200 | title: YouTube Smart Clip Player
+mobile: https://ianes1978.github.io/SmartClips/ -> HTTP 200 | title: YouTube Smart Clip Player
+mobile-lowercase: https://ianes1978.github.io/smartclips/ -> HTTP 404 | title: Page not found · GitHub Pages
+Sun Nov  1 08:54:03 UTC 2026
