@@ -180,7 +180,7 @@
           </button>
         </div>
         <p id="gemini-hint" class="hidden mt-2 text-[11px] text-indigo-300 bg-indigo-950/40 border border-indigo-900/60 rounded-lg px-3 py-2">
-          Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi aggiungi la trascrizione in fondo e invia.
+          Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi sostituisci [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI] con la trascrizione (e, se la conosci, la data) e invia.
         </p>
       </div>
 
@@ -757,17 +757,68 @@
     });
 
     // ---------- Prompt da copiare ----------
-    const PROMPT_TEMPLATE = `Analizza la trascrizione del video che trovi qui sotto. Dimmi in 5 punti:
-1) Il succo del video senza giri di parole;
-2) L'autore parla per competenza reale o sono solo opinioni personali?;
-3) Quanta fuffa c'è rispetto alla durata totale (indicami i minuti esatti da guardare);
-4) Vale il mio tempo o mi basta leggere questo tuo riassunto?;
-5) Input per il mio Player: dammi un blocco di codice JSON (pronto per il copia-incolla) con i soli spezzoni utili e i tempi convertiti in secondi interi. 
-IMPORTANTE SUL TIMING: usa solo timestamp realmente presenti nella trascrizione e calcola "start" ed "end" con la formula esatta (ore*3600) + (minuti*60) + secondi (es. 12:32 diventa 12*60 + 32 = 752).
-Usa esattamente questo formato:
-{"video_id": "ID_VIDEO", "clips": [{"start": 0, "end": 0, "label": "MM:SS-MM:SS", "title": "Argomento"}]}
+    const PROMPT_TEMPLATE = `Sei un analista critico di contenuti video. Analizza la trascrizione qui sotto.
+
+CONTROLLO INIZIALE
+- Se mancano l'ID del video o la trascrizione (o ci sono ancora i segnaposto
+  tra parentesi quadre), NON procedere: chiedimi i dati mancanti e fermati.
+- Se la trascrizione non ha i timestamp, dimmelo e salta i punti 4 e 6.
+
+Rispondi in 6 punti, in modo diretto e senza preamboli.
+
+1) SUCCO
+   Il messaggio centrale in 3-5 frasi, senza giri di parole.
+
+2) AFFIDABILITÀ DELL'AUTORE
+   Parla per competenza reale o per opinione personale? Basati su indizi
+   concreti presenti nella trascrizione (dati, fonti citate, precisione
+   tecnica, esperienza dichiarata) e cita ogni indizio con il timestamp.
+
+3) FACT CHECKING
+   a) Estrai le 5-10 affermazioni più importanti che si possono verificare
+      (numeri, date, fatti, affermazioni scientifiche o tecniche).
+      Ignora opinioni e gusti personali.
+   b) Presentale in una tabella con queste colonne:
+      | Timestamp | Affermazione (breve) | Verdetto | Spiegazione | Base |
+      - Verdetto: ✅ Corretta | ⚠️ Imprecisa | ❌ Falsa | ❓ Non verificabile
+      - Base: [Web + link] | [Conoscenza del modello] | [Solo logica interna]
+   c) Regole:
+      - Se puoi fare ricerche web, usale e cita la fonte. Altrimenti
+        dichiaralo all'inizio del punto e ricorda che le tue conoscenze hanno
+        una data limite.
+      - Nel dubbio usa ❓. Non inventare mai fonti, studi, dati o link.
+      - Segnala con 🕒 le affermazioni che possono essere cambiate dopo la
+        data del video (prezzi, leggi, versioni di software, statistiche).
+   d) Chiudi con un punteggio di affidabilità complessiva da 1 a 10, motivato
+      in una frase.
+
+4) FUFFA
+   La percentuale di fuffa rispetto alla durata totale (intro, sponsor,
+   ripetizioni, divagazioni, richieste di iscrizione, affermazioni ❌).
+   Poi elenca i minuti esatti che vale la pena guardare.
+
+5) VERDETTO
+   Una sola delle tre: "Guardalo tutto" | "Guarda solo le clip" |
+   "Basta il riassunto". Aggiungi una frase di motivazione.
+
+6) INPUT PER IL PLAYER
+   Includi solo gli spezzoni utili. Escludi quelli con affermazioni ❌ e
+   aggiungi "⚠️" all'inizio del titolo delle clip con affermazioni imprecise.
+   REGOLE SUL TIMING:
+   - Usa solo timestamp realmente presenti nella trascrizione: non stimare
+     e non arrotondare.
+   - Converti in secondi con (ore*3600) + (minuti*60) + secondi
+     (es. 12:32 → 12*60 + 32 = 752; 1:05:10 → 3600 + 300 + 10 = 3910).
+   - "end" deve essere maggiore di "start", le clip devono essere in ordine
+     cronologico e non devono sovrapporsi.
+   - Prima del JSON, mostra il calcolo di ogni clip in una riga.
+   - Il JSON deve stare in un unico blocco di codice, valido, senza commenti
+     e senza campi aggiuntivi.
+   Formato esatto:
+   {"video_id": "ID_VIDEO", "clips": [{"start": 0, "end": 0, "label": "MM:SS-MM:SS", "title": "Argomento"}]}
 
 ID_VIDEO: [INCOLLA QUI L'ID DEL VIDEO]
+DATA DI PUBBLICAZIONE: [INCOLLA QUI LA DATA, se la conosci]
 TRASCRIZIONE:
 [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI]`;
 
@@ -823,7 +874,7 @@ TRASCRIZIONE:
       copying.then((ok) => {
         const hint = $('gemini-hint');
         hint.textContent = ok
-          ? 'Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi aggiungi la trascrizione in fondo e invia.'
+          ? 'Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi sostituisci [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI] con la trascrizione (e, se la conosci, la data) e invia.'
           : 'Non sono riuscito a copiare il prompt: premi "Copia" (o selezionalo a mano) e incollalo in Gemini.';
         hint.classList.remove('hidden');
         clearTimeout(hint._t);
