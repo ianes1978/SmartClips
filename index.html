@@ -166,7 +166,7 @@
         </div>
         <input id="prompt-link" type="text" inputmode="url" autocomplete="off"
           class="w-full mb-2 rounded-lg bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600"
-          placeholder="(Facoltativo) Link o ID del video YouTube: compila ID_VIDEO" />
+          placeholder="(Facoltativo) Link o ID del video YouTube: compila ID e link nel prompt" />
         <pre id="prompt-text" tabindex="0" title="Clicca per selezionare tutto"
           class="scroll-thin select-all cursor-text whitespace-pre-wrap break-words max-h-56 overflow-y-auto rounded-lg bg-zinc-950 border border-zinc-800 p-3 font-mono text-[11px] leading-relaxed text-zinc-300"></pre>
         <div class="mt-3 flex flex-wrap gap-2">
@@ -815,7 +815,12 @@ TRASCRIZIONE:
       const raw = $('prompt-link').value.trim();
       if (!raw) return PROMPT_TEMPLATE;
       const id = normalizeVideoId(raw);
-      return PROMPT_TEMPLATE.replace("[INCOLLA QUI L'ID DEL VIDEO]", () => id);
+      // Inserisce l'ID e, sotto, il link pulito del video (senza parametri di tracciamento)
+      const valid = /^[A-Za-z0-9_-]{11}$/.test(id);
+      const line = valid
+        ? `ID_VIDEO: ${id}\nLINK DEL VIDEO: https://www.youtube.com/watch?v=${id}`
+        : `ID_VIDEO: ${id}`;
+      return PROMPT_TEMPLATE.replace("ID_VIDEO: [INCOLLA QUI L'ID DEL VIDEO]", () => line);
     }
     function renderPrompt() { $('prompt-text').textContent = currentPrompt(); }
 
