@@ -23,7 +23,7 @@ jobs:
 
       - name: Fetch the live site
         run: |
-          sleep 20
+          sleep 90
           for u in \
             "https://ianes1978.github.io/SmartClips/" \
             "https://ianes1978.github.io/SmartClips/index.html" \
@@ -34,5 +34,7 @@ jobs:
             curl -s -o /tmp/body -D - "$u" | grep -iE '^(HTTP|location|content-type|last-modified|age|x-cache|cache-control)' || true
             echo "-- first bytes: $(head -c 200 /tmp/body | tr '\n' ' ')"
             grep -o 'Apri in Gemini' /tmp/body | head -1 || true
+            grep -o 'Sei un analista critico' /tmp/body | head -1 || true
+            echo "Carica Esempio presente: $(grep -c 'Carica Esempio' /tmp/body)"
             echo
           done
