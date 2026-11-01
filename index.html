@@ -166,7 +166,14 @@
         </div>
         <input id="prompt-link" type="text" inputmode="url" autocomplete="off"
           class="w-full mb-2 rounded-lg bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600"
-          placeholder="(Facoltativo) Link o ID del video YouTube: compila ID e link nel prompt" />
+          placeholder="Link o ID del video YouTube" />
+        <input id="prompt-date" type="text" autocomplete="off"
+          class="w-full mb-2 rounded-lg bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600"
+          placeholder="(Facoltativo) Data di pubblicazione, es. 12/03/2025" />
+        <textarea id="prompt-transcript" rows="3" spellcheck="false"
+          class="scroll-thin w-full mb-1 resize-y rounded-lg bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600"
+          placeholder="(Facoltativo) Incolla qui la trascrizione con i minuti. Se la lasci vuota, Gemini la ricaverà dal link."></textarea>
+        <p id="prompt-status" class="mb-2 text-[11px] text-zinc-500"></p>
         <pre id="prompt-text" tabindex="0" title="Clicca per selezionare tutto"
           class="scroll-thin select-all cursor-text whitespace-pre-wrap break-words max-h-56 overflow-y-auto rounded-lg bg-zinc-950 border border-zinc-800 p-3 font-mono text-[11px] leading-relaxed text-zinc-300"></pre>
         <div class="mt-3 flex flex-wrap gap-2">
@@ -180,7 +187,7 @@
           </button>
         </div>
         <p id="gemini-hint" class="hidden mt-2 text-[11px] text-indigo-300 bg-indigo-950/40 border border-indigo-900/60 rounded-lg px-3 py-2">
-          Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi sostituisci [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI] con la trascrizione (e, se la conosci, la data) e invia.
+          Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V) e invia.
         </p>
       </div>
 
@@ -811,18 +818,61 @@ DATA DI PUBBLICAZIONE: [INCOLLA QUI LA DATA, se la conosci]
 TRASCRIZIONE:
 [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI]`;
 
-    function currentPrompt() {
+    // Compila i segnaposto del prompt con link, data e trascrizione inseriti nei campi.
+    // Così Gemini non si ferma per "segnaposto ancora presenti".
+    function promptState() {
       const raw = $('prompt-link').value.trim();
-      if (!raw) return PROMPT_TEMPLATE;
-      const id = normalizeVideoId(raw);
-      // Inserisce l'ID e, sotto, il link pulito del video (senza parametri di tracciamento)
-      const valid = /^[A-Za-z0-9_-]{11}$/.test(id);
-      const line = valid
-        ? `ID_VIDEO: ${id}\nLINK DEL VIDEO: https://www.youtube.com/watch?v=${id}`
-        : `ID_VIDEO: ${id}`;
-      return PROMPT_TEMPLATE.replace("ID_VIDEO: [INCOLLA QUI L'ID DEL VIDEO]", () => line);
+      const id = raw ? normalizeVideoId(raw) : '';
+      const validId = /^[A-Za-z0-9_-]{11}$/.test(id);
+      const date = $('prompt-date').value.trim();
+      const transcript = $('prompt-transcript').value.trim();
+      return { raw, id, validId, date, transcript };
     }
-    function renderPrompt() { $('prompt-text').textContent = currentPrompt(); }
+
+    function currentPrompt() {
+      const { raw, id, validId, date, transcript } = promptState();
+      let text = PROMPT_TEMPLATE;
+      if (raw) {
+        // ID e, sotto, il link pulito del video (senza parametri di tracciamento)
+        const line = validId
+          ? `ID_VIDEO: ${id}\nLINK DEL VIDEO: https://www.youtube.com/watch?v=${id}`
+          : `ID_VIDEO: ${id}`;
+        text = text.replace("ID_VIDEO: [INCOLLA QUI L'ID DEL VIDEO]", () => line);
+      }
+      if (transcript) {
+        text = text.replace('[INCOLLA QUI LA TRASCRIZIONE CON I MINUTI]', () => transcript);
+      } else if (validId) {
+        text = text.replace('[INCOLLA QUI LA TRASCRIZIONE CON I MINUTI]', () =>
+          'Non incollata: ricava tu la trascrizione con i timestamp dal video al LINK DEL VIDEO qui sopra. ' +
+          'Se non riesci ad accedere al video o ai suoi timestamp, dimmelo e fermati.');
+      }
+      if (date) {
+        text = text.replace('[INCOLLA QUI LA DATA, se la conosci]', () => date);
+      } else if (raw || transcript) {
+        text = text.replace('[INCOLLA QUI LA DATA, se la conosci]', () =>
+          validId ? 'non indicata (se puoi, ricavala dal video)' : 'non indicata');
+      }
+      return text;
+    }
+
+    function renderPrompt() {
+      $('prompt-text').textContent = currentPrompt();
+      const { raw, validId, transcript } = promptState();
+      const st = $('prompt-status');
+      if (!raw && !transcript) {
+        st.textContent = 'Inserisci almeno il link del video: senza, Gemini si fermerà chiedendo i dati mancanti.';
+        st.className = 'mb-2 text-[11px] text-amber-400';
+      } else if (raw && !validId) {
+        st.textContent = 'Link o ID non riconosciuto: controlla che sia un video YouTube.';
+        st.className = 'mb-2 text-[11px] text-red-400';
+      } else if (!transcript) {
+        st.textContent = '✓ Pronto. Senza trascrizione Gemini la ricaverà dal link (se non ci riesce, te la chiederà).';
+        st.className = 'mb-2 text-[11px] text-emerald-400';
+      } else {
+        st.textContent = '✓ Pronto: il prompt contiene tutti i dati.';
+        st.className = 'mb-2 text-[11px] text-emerald-400';
+      }
+    }
 
     function copyFallback(text) {
       // Fallback per contesti non sicuri / browser datati
@@ -868,7 +918,7 @@ TRASCRIZIONE:
       copying.then((ok) => {
         const hint = $('gemini-hint');
         hint.textContent = ok
-          ? 'Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V), poi sostituisci [INCOLLA QUI LA TRASCRIZIONE CON I MINUTI] con la trascrizione (e, se la conosci, la data) e invia.'
+          ? 'Prompt copiato! In Gemini incollalo (tieni premuto → Incolla, oppure Ctrl/Cmd+V) e invia.'
           : 'Non sono riuscito a copiare il prompt: premi "Copia" (o selezionalo a mano) e incollalo in Gemini.';
         hint.classList.remove('hidden');
         clearTimeout(hint._t);
@@ -885,6 +935,8 @@ TRASCRIZIONE:
       });
     }
     $('prompt-link').addEventListener('input', renderPrompt);
+    $('prompt-date').addEventListener('input', renderPrompt);
+    $('prompt-transcript').addEventListener('input', renderPrompt);
     renderPrompt();
 
     // ---------- Condivisione da YouTube (Web Share Target) ----------
