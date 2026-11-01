@@ -62,7 +62,7 @@
         <div id="player"></div>
         <div id="player-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-zinc-500">
           <svg viewBox="0 0 24 24" class="w-14 h-14 mb-3 fill-zinc-700"><path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8zM10 15V9l5.2 3z"/></svg>
-          <p class="text-sm">Incolla un JSON a destra e premi <span class="text-zinc-300 font-medium">Carica e Riproduci</span>,<br/>oppure prova con <span class="text-zinc-300 font-medium">Carica Esempio</span>.</p>
+          <p class="text-sm">Incolla il JSON nel riquadro <span class="text-zinc-300 font-medium">Input JSON</span><br/>e premi <span class="text-zinc-300 font-medium">Carica e Riproduci</span>.</p>
         </div>
       </div>
 
@@ -198,9 +198,6 @@
             <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M8 5v14l11-7z"/></svg>
             Carica e Riproduci
           </button>
-          <button id="btn-example" class="inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium transition">
-            Carica Esempio
-          </button>
         </div>
         <p class="mt-2 text-[11px] text-zinc-500">Suggerimento: puoi incollare anche il blocco Markdown <code class="text-zinc-400">```json … ```</code>, verrà ripulito automaticamente.</p>
       </div>
@@ -230,14 +227,6 @@
     'use strict';
 
     // ---------- Stato ----------
-    const EXAMPLE = {
-      video_id: 'r7KH74DtMnM',
-      clips: [
-        { start: 405, end: 809, label: '06:45-13:29', title: 'Parte principale' },
-        { start: 809, end: 837, label: '13:29-13:57', title: 'Conclusione' }
-      ]
-    };
-
     const state = {
       player: null,
       apiReady: false,
@@ -915,10 +904,6 @@ TRASCRIZIONE:
 
     // ---------- Eventi UI ----------
     $('btn-load').addEventListener('click', loadFromTextarea);
-    $('btn-example').addEventListener('click', () => {
-      $('json-input').value = JSON.stringify(EXAMPLE, null, 2);
-      loadFromTextarea();
-    });
     $('btn-clear').addEventListener('click', () => { $('json-input').value = ''; showError(''); $('json-input').focus(); });
     $('btn-prev').addEventListener('click', () => playClip(state.current - 1));
     $('btn-next').addEventListener('click', () => playClip(state.current + 1));
